@@ -37,7 +37,7 @@ def index():
 def format_response(response):
     """
     This function formats the response into a structured multiple-choice question
-    with HTML formatting and extracts the correct answer.
+    with HTML formatting and ensures there are 4 options, extracting the correct answer.
     """
     lines = response.split("\n")
     
@@ -55,11 +55,13 @@ def format_response(response):
         return "Error: No valid question found.", "N/A"
     
     # Extract the options (lines starting with a, b, c, d)
-    for i, line in enumerate(lines[1:5]):
-        option_letter = line.strip()[0] if len(line.strip()) > 2 else None
-        if option_letter in ['a', 'b', 'c', 'd']:
-            option_text = line.strip()[3:].strip()  # Remove the option letter and space
-            options[option_letter] = option_text
+    option_letters = ['a', 'b', 'c', 'd']
+    for i, option_letter in enumerate(option_letters):
+        option_line = next((line for line in lines if line.strip().startswith(f"{option_letter})")), None)
+        if option_line:
+            options[option_letter] = option_line.strip()[3:].strip()  # Remove the option letter and space
+        else:
+            options[option_letter] = f"Option {chr(97 + i)} not provided"
     
     # Extract the correct answer
     correct_answer_line = next((line for line in lines if line.strip().startswith("Correct Answer:")), None)
