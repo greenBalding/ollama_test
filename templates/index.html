@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Question</title>
+</head>
+<body>
+    <h1>Generate a Multiple-Choice Question</h1>
+
+    {% if question %}
+        <div>
+            <h2>Generated Question:</h2>
+            <p>{{ question|safe }}</p>
+            <p><strong>Correct Answer:</strong> {{ correct_answer }}</p>
+        </div>
+    {% else %}
+        <form method="POST">
+            <label for="prompt">Enter a theme or topic for the question:</label>
+            <input type="text" id="prompt" name="prompt" required>
+            <button type="submit">Generate Question</button>
+        </form>
+    {% endif %}
+</body>
+</html>
