@@ -4,22 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate Question</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Generate a Multiple-Choice Question</h1>
-
-    {% if question %}
-        <div>
-            <h2>Generated Question:</h2>
-            <p>{{ question|safe }}</p>
-            <p><strong>Correct Answer:</strong> {{ correct_answer }}</p>
-        </div>
-    {% else %}
-        <form method="POST">
-            <label for="prompt">Enter a theme or topic for the question:</label>
-            <input type="text" id="prompt" name="prompt" required>
-            <button type="submit">Generate Question</button>
-        </form>
-    {% endif %}
+    <div class="container">
+        <h1>Generate a Multiple-Choice Question</h1>
+        
+        {% if question %}
+            <div class="result-container">
+                <div class="question-box">
+                    <h2>Generated Question:</h2>
+                    <p>{{ question|safe }}</p>
+                    <ul>
+                        <li>a) {{ option_a }}</li>
+                        <li>b) {{ option_b }}</li>
+                        <li>c) {{ option_c }}</li>
+                        <li>d) {{ option_d }}</li>
+                    </ul>
+                </div>
+                <div class="answer-explanation">
+                    <div class="correct-answer">
+                        <h3><strong>Correct Answer:</strong></h3>
+                        <p>{{ correct_answer }}</p>
+                    </div>
+                    {% if explanation %}
+                        <div class="explanation">
+                            <h3><strong>Explanation:</strong></h3>
+                            <p>{{ explanation }}</p>
+                        </div>
+                    {% endif %}
+                    <form method="POST">
+                        <input type="hidden" name="prompt" value="{{ prompt }}">
+                        <button type="submit" name="regenerate">Regenerate Question</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <form method="POST">
+                <label for="prompt">Enter a theme or topic for the question:</label>
+                <input type="text" id="prompt" name="prompt" placeholder="e.g., Physics, Geography, History" required>
+                <button type="submit">Generate Question</button>
+            </form>
+        {% endif %}
+    </div>
 </body>
 </html>

@@ -1,81 +1,81 @@
 from flask import Flask, render_template, request
 import ollama
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
+
+def generate_question(prompt):
+    """
+    Calls Ollama API to generate a multiple-choice question with an explanation.
+    """
+    model_prompt = (
+        f"Generate a simple multiple-choice question about {prompt} with 4 options. "
+        "Ensure that one option is correct and provide an explanation for the correct answer. "
+        "Format the response as follows:\n"
+        "Question: <question text>\n"
+        "a) <option 1>\n"
+        "b) <option 2>\n"
+        "c) <option 3>\n"
+        "d) <option 4>\n"
+        "Correct Answer: <correct option>\n"
+        "Explanation: <why this option is correct>"
+    )
+    
+    response = ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': model_prompt}])
+    
+    if 'message' in response and 'content' in response['message']:
+        return parse_response(response['message']['content'])
+    return "Error generating question.", "N/A", "No explanation available."
+
+def parse_response(response_text):
+    """Extracts the question, options, correct answer, and explanation from the response."""
+    lines = response_text.split("\n")
+    question, options, correct_answer, explanation = None, {}, None, None
+    
+    for line in lines:
+        if line.startswith("Question:"):
+            question = line.replace("Question:", "").strip()
+        elif line.startswith("a)") or line.startswith("b)") or line.startswith("c)") or line.startswith("d)") :
+            key = line[0]
+            options[key] = line[3:].strip()
+        elif line.startswith("Correct Answer:"):
+            correct_answer = line.replace("Correct Answer:", "").strip()
+        elif line.startswith("Explanation:"):
+            explanation = line.replace("Explanation:", "").strip()
+
+    # Return the options separately to use them in the HTML template
+    option_a = options.get('a', '')
+    option_b = options.get('b', '')
+    option_c = options.get('c', '')
+    option_d = options.get('d', '')
+    
+    return question, option_a, option_b, option_c, option_d, correct_answer, explanation
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    # Initialize variables
+    question, option_a, option_b, option_c, option_d, correct_answer, explanation = None, None, None, None, None, None, None
+    prompt = ""
+    
+    # Handle the form submission
     if request.method == 'POST':
-        user_input = request.form['prompt']
+        prompt = request.form['prompt']
         
-        # Create a clear prompt to request a multiple-choice question with one correct answer
-        model_prompt = f"Generate a simple multiple-choice question about {user_input} with 4 options. " \
-                       "Please ensure that one option is correct, and provide the question in the following format:\n" \
-                       "Question: <question text>\n" \
-                       "a) <option 1>\n" \
-                       "b) <option 2>\n" \
-                       "c) <option 3>\n" \
-                       "d) <option 4>\n" \
-                       "Correct Answer: <option>"
-
-        # Call Ollama API to generate the response
-        response = ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': model_prompt}])
-        
-        # Check if response contains the correct structure
-        if 'message' in response and 'content' in response['message']:
-            generated_content = response['message']['content']
+        # If the 'regenerate' button is clicked, regenerate the full question
+        if 'regenerate' in request.form:
+            question, option_a, option_b, option_c, option_d, correct_answer, explanation = generate_question(prompt)
         else:
-            generated_content = "Sorry, there was an error generating the response."
-        
-        # Format the response to split the question and options
-        formatted_content, correct_answer = format_response(generated_content)
-        
-        return render_template('index.html', question=formatted_content, correct_answer=correct_answer)
+            # Initial generation on the first submit
+            question, option_a, option_b, option_c, option_d, correct_answer, explanation = generate_question(prompt)
     
-    return render_template('index.html', question=None, correct_answer=None)
-
-def format_response(response):
-    """
-    This function formats the response into a structured multiple-choice question
-    with HTML formatting and ensures there are 4 options, extracting the correct answer.
-    """
-    lines = response.split("\n")
-    
-    question = None
-    options = {}
-    correct_answer = None
-    
-    # Find the question text
-    for line in lines:
-        if line.strip().startswith("Question:"):
-            question = line.strip().replace("Question:", "").strip()
-            break
-    
-    if not question:
-        return "Error: No valid question found.", "N/A"
-    
-    # Extract the options (lines starting with a, b, c, d)
-    option_letters = ['a', 'b', 'c', 'd']
-    for i, option_letter in enumerate(option_letters):
-        option_line = next((line for line in lines if line.strip().startswith(f"{option_letter})")), None)
-        if option_line:
-            options[option_letter] = option_line.strip()[3:].strip()  # Remove the option letter and space
-        else:
-            options[option_letter] = f"Option {chr(97 + i)} not provided"
-    
-    # Extract the correct answer
-    correct_answer_line = next((line for line in lines if line.strip().startswith("Correct Answer:")), None)
-    if correct_answer_line:
-        correct_answer = correct_answer_line.replace("Correct Answer:", "").strip()
-    
-    # Create an HTML-formatted multiple choice question
-    formatted_content = f"<h2>{question}</h2>"
-    formatted_content += "<ul>"
-    for letter, option in options.items():
-        formatted_content += f"<li>{letter}) {option}</li>"
-    formatted_content += "</ul>"
-    
-    return formatted_content, correct_answer
+    return render_template('index.html', 
+                           question=question, 
+                           option_a=option_a,
+                           option_b=option_b,
+                           option_c=option_c,
+                           option_d=option_d,
+                           correct_answer=correct_answer,
+                           explanation=explanation,
+                           prompt=prompt)
 
 if __name__ == '__main__':
     app.run(debug=True)
